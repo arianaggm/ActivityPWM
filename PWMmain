@@ -1,0 +1,84 @@
+#include <xc.h>
+#include "configs.h"
+
+#define PWM_FREQ 2500
+#define PWM1_out TRISCbits.RC2
+#define PWM2_out TRISCbits.RC1
+#define PWM3_out TRISCbits.RC0
+#define PWM3_pin LATCbits.LC0
+
+#define IN 1
+#define OUT 0
+#define _XTAL_FREQ 4000000
+
+void configADC(char CHANNELS);
+void configPWM1 (void); 
+void configPWM2(void); 
+void setDC1(char x);
+void setDC2(char x);
+
+char duty3;
+char HiLo;
+double multiplier = _XTAL_FREQ/(PWM_FREQ*16.0*100);
+
+
+void main(void){
+    OSCCON = 0x7F; //0b01111111;
+    configADC(3);
+    configPWM1();
+    configPWM2();
+    unsigned int percent1;
+    unsigned int percent2;
+    
+    while (1){
+        percent1= 0;
+        percent2= 0;
+      
+        setDC1(percent1);
+        setDC2(percent2);
+        __delay_ms(400);
+    }
+    return;
+}
+
+void setDC1(char x){
+    if(x>100){
+        x = 100;
+    }
+    
+    int val = x*multiplier;
+    CCPR1L = (val - val%4)/4;
+    CCP1CONbits.DC1B = val%4;
+}
+void configADC(char CHANNELS){
+    char allchannelsoff = 0x0F;
+    ADCON1 = (allchannelsoff-CHANNELS);
+    ADCON2 = 0x80;
+    ADCON0bits.ADON = 1;
+    
+}
+void setDC2(char x){
+    if(x>100){
+        x=100;
+    }
+    int val = x*multiplier;
+    CCPR2L = (val - val%4)/4; 
+    CCP2CONbits.DC2B = val%4;
+}
+
+void configPWM1(){
+    PWM1_out = OUT;
+    PR2 = _XTAL_FREQ/(4.0 * PWM_FREQ*16.0)-1;
+    setDC1(50);
+    T2CON = 0b00000111;
+    CCP1CON = 0b00001100;
+    return;
+}
+
+void configPWM2(){
+    PWM2_out = OUT;
+    PR2 = _XTAL_FREQ/(4.0 * PWM_FREQ*16.0)-1;
+    setDC2(50);
+    CCP2CON = 0b00001100;
+    return;
+}
